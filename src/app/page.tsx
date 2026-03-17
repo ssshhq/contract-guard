@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, Clock3, FileClock, PlayCircle } from "lucide-react";
+import { ShieldCheck, Clock3, FileClock, PlayCircle, ChevronDown, Eye, EyeOff } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import ReviewResult from "@/components/ReviewResult";
+import PasswordGate from "@/components/PasswordGate";
 import type { ReviewResult as ReviewResultType } from "@/lib/types";
 
 interface ReviewHistoryItem {
@@ -83,6 +84,48 @@ const DEMO_RESULT: ReviewResultType = {
 };
 
 export default function Home() {
+  // --- 密码门控逻辑（文件最前面） ---
+  const [authed, setAuthed] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    let localAuthed = false;
+    try {
+      localAuthed = window.localStorage.getItem("contract-guard-authed-v1") === "1";
+    } catch {
+      // ignore
+    }
+
+    if (localAuthed) {
+      setAuthed(true);
+      setAuthChecking(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await fetch("/api/auth", { method: "GET" });
+        const data = await res.json().catch(() => ({}));
+        const ok = Boolean(data?.authed);
+        if (ok) {
+          setAuthed(true);
+          try {
+            window.localStorage.setItem("contract-guard-authed-v1", "1");
+          } catch {
+            // ignore
+          }
+        }
+      } finally {
+        setAuthChecking(false);
+      }
+    })();
+  }, []);
+
+  const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState("");
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const [result, setResult] = useState<ReviewResultType | null>(null);
   const [meta, setMeta] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +173,21 @@ export default function Home() {
     setMeta(demoMeta);
     setError(null);
     pushHistory(DEMO_RESULT, demoMeta);
+  }
+
+  if (!authed) {
+    if (authChecking) {
+      return (
+        <div className="min-h-screen bg-slate-50">
+          <main className="mx-auto flex w-full max-w-5xl flex-col px-4 pb-16 pt-12 sm:px-6 lg:px-8 lg:pt-16">
+            <section className="rounded-3xl border border-slate-200 bg-white/80 px-6 py-10 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:px-10">
+              <div className="text-sm text-slate-600">正在验证访问权限…</div>
+            </section>
+          </main>
+        </div>
+      );
+    }
+    return <PasswordGate onAuthed={() => setAuthed(true)} />;
   }
 
   return (
@@ -206,7 +264,65 @@ export default function Home() {
 
         {/* 上传区域 */}
         <section id="contract-upload-area" className="mt-10">
+          {/* 设置区域（上传区域上方） */}
+          <div className="mx-auto mb-4 w-full max-w-3xl">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              aria-expanded={settingsOpen}
+            >
+              <span>使用自己的模型（点击展开）</span>
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform ${
+                  settingsOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {settingsOpen && (
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <input
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="输入Model（如 deepseek-chat）"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={apiKeyVisible ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="输入API Key（不填则使用免费额度）"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setApiKeyVisible((v) => !v)}
+                      className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+                      aria-label={apiKeyVisible ? "隐藏API Key" : "显示API Key"}
+                    >
+                      {apiKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                  Key仅用于本次请求，不会被存储。免费额度：1次
+                </p>
+              </div>
+            )}
+          </div>
+
           <FileUpload
+            apiKey={apiKey}
+            model={model}
             onResult={(r, m) => {
               setResult(r);
               setMeta(m);

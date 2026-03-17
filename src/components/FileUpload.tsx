@@ -7,6 +7,8 @@ import type { ReviewResult, UploadState } from "@/lib/types";
 interface FileUploadProps {
   onResult: (result: ReviewResult, meta: any) => void;
   onError: (error: string) => void;
+  apiKey?: string;
+  model?: string;
 }
 
 const ACCEPTED_TYPES = [
@@ -37,7 +39,7 @@ function getStatusText(state: UploadState) {
   }
 }
 
-export default function FileUpload({ onResult, onError }: FileUploadProps) {
+export default function FileUpload({ onResult, onError, apiKey, model }: FileUploadProps) {
   const [uploadState, setUploadState] = useState<UploadState>({
     status: "idle",
     progress: 0,
@@ -128,9 +130,18 @@ export default function FileUpload({ onResult, onError }: FileUploadProps) {
         progress: 35,
       }));
 
+      const trimmedKey = (apiKey || "").trim();
+      const trimmedModel = (model || "").trim();
       const response = await fetch("/api/review", {
         method: "POST",
         body: formData,
+        headers:
+          trimmedKey || trimmedModel
+            ? {
+                ...(trimmedKey ? { "x-api-key": trimmedKey } : {}),
+                ...(trimmedModel ? { "x-model": trimmedModel } : {}),
+              }
+            : undefined,
       });
 
       if (!response.ok) {
