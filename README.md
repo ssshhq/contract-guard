@@ -64,6 +64,7 @@ cp .env.local.example .env.local
 npm run dev
 
 # 浏览器打开 http://localhost:3000
+```
 
 ## ⚙️ 环境变量说明
 
@@ -72,14 +73,6 @@ npm run dev
 | `DEEPSEEK_API_KEY` | ✅ | DeepSeek API 密钥，[获取地址](https://platform.deepseek.com/api_keys) ；也可用其它模型|
 | `ACCESS_PASSWORD` | 可选 | 访问密码;可设置多个密码，多个密码用逗号分隔 |
 
-## 🛠️ 技术栈
-
-- **前端框架**：Next.js 16 + React + TypeScript
-- **样式**：Tailwind CSS v4
-- **AI 模型**：DeepSeek-V3（通过 OpenAI 兼容接口调用）
-- **文件解析**：pdf-parse（PDF）、mammoth（DOCX）
-- **部署**：Vercel（免费托管）
-- **开发工具**：Cursor（AI 辅助编码）
 
 ## 📁 项目结构
 
