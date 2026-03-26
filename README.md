@@ -6,7 +6,7 @@
 
 🔗 **[点击访问](https://contract-guard-alpha.vercel.app)**
 
-> 需要访问密码，访问密码为：contract20260317。
+> 需要访问密码，可联系作者获取。
 
 ## 📸 产品截图
 
